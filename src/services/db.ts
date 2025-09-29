@@ -1,6 +1,6 @@
-const DB_NAME = 'OfflineRequestsDB'
+const DB_NAME = 'requests'
 const DB_VERSION = 1
-const STORE_NAME = 'queuedRequests'
+const STORE_NAME = 'queued-requests'
 
 export function initDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {

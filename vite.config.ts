@@ -3,8 +3,8 @@ import { defineConfig } from "vite"
 import { VitePWA } from "vite-plugin-pwa"
 
 // https://vite.dev/config/
-export default defineConfig({
-  base: '/my-pwa-test/',
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/my-pwa-test/' : '/',
   plugins: [
     react(),
     VitePWA({
@@ -21,4 +21,4 @@ export default defineConfig({
       }
     })
   ]
-})
+}))

@@ -7,10 +7,12 @@ import { useEffect, useState } from "react"
 import CloudUploadIcon from "@mui/icons-material/CloudUpload"
 import CodeIcon from "@mui/icons-material/Code"
 import DeleteIcon from "@mui/icons-material/Delete"
+import LockOutlineIcon from "@mui/icons-material/LockOutline"
 import WifiIcon from "@mui/icons-material/Wifi"
 import WifiOffIcon from "@mui/icons-material/WifiOff"
 import { AppBar, Box, Button, Chip, Container, Drawer, IconButton, ImageList, ImageListItem, Toolbar } from "@mui/material"
 import { styled } from "@mui/material/styles"
+import CredentialsDialog from "./credentials"
 import { deleteAndQueue, listImages, uploadAndQueue } from "./services/s3"
 
 import type { Image } from "./services/s3"
@@ -34,6 +36,7 @@ const VisuallyHiddenInput = styled("input")({
 
 function App() {
     const [logs, setLogs] = useState<ConsoleEntry[]>([])
+    const [dialogOpen, setDialogOpen] = useState(false)
     const [images, setImages] = useState<Image[]>([])
     const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine)
     const [drawerOpen, setDrawerOpen] = useState(false)
@@ -162,6 +165,7 @@ function App() {
 
     return (
         <>
+            <CredentialsDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
             <Box sx={{ flexGrow: 1 }}>
                 <AppBar color="inherit">
                     <Toolbar>
@@ -170,7 +174,10 @@ function App() {
                             <VisuallyHiddenInput type="file" onChange={event => handleFileChange(event)} multiple />
                         </Button>
                         <Box sx={{ ml: "auto" }}>
-                            <IconButton color="inherit" sx={{ mr: 1 }} onClick={toggleDrawer}>
+                            <IconButton color="inherit" sx={{ mr: 1 }} onClick={() => setDialogOpen(true)}>
+                                <LockOutlineIcon />
+                            </IconButton>
+                            <IconButton color="inherit" sx={{ mr: 2 }} onClick={toggleDrawer}>
                                 <CodeIcon />
                             </IconButton>
                             <Chip

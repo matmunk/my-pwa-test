@@ -7,7 +7,7 @@ import type { QueuedRequestData } from "./services/s3"
 
 declare const self: ServiceWorkerGlobalScope
 
-const STORE_NAME = 'queuedRequests'
+const STORE_NAME = 'queued-requests'
 
 async function processQueue(): Promise<void> {
     const db = await initDB()
