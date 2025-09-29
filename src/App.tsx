@@ -104,6 +104,10 @@ function App() {
     }, [])
 
     useEffect(() => {
+        if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: "SYNC_QUEUE" })
+        }
+
         const handleOnline = () => {
             setIsOnline(true)
 
@@ -113,11 +117,15 @@ function App() {
         }
         const handleOffline = () => setIsOnline(false)
 
-        const onSyncComplete = (event: MessageEvent) => {
+        const handleMessage = (event: MessageEvent) => {
             if (event.data && event.data.type === "QUEUE_PROCESSED") {
                 if (event.data.processedCount > 0) {
                     fetchImages()
                 }
+            }
+
+            if (event.data && event.data.type === "SW_LOG") {
+                console.log(event.data.message)
             }
         }
 
@@ -125,7 +133,7 @@ function App() {
         window.addEventListener("offline", handleOffline)
 
         if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.addEventListener("message", onSyncComplete)
+            navigator.serviceWorker.addEventListener("message", handleMessage)
         }
 
         return () => {
@@ -133,7 +141,7 @@ function App() {
             window.removeEventListener("offline", handleOffline)
 
             if ("serviceWorker" in navigator) {
-                navigator.serviceWorker.removeEventListener("message", onSyncComplete)
+                navigator.serviceWorker.removeEventListener("message", handleMessage)
             }
         }
     }, [])

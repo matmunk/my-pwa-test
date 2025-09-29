@@ -5,8 +5,9 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import { initDB } from "./db.ts"
 
 const AWS_REGION = "eu-central-1"
-const CREDENTIALS_KEY = 'aws-credentials'
-const STORE_NAME = 'queued-requests'
+const QUEUE_STORE = 'queue'
+const CREDENTIALS_STORE = 'credentials'
+const CREDENTIALS_ID = 'default'
 const BUCKET = "my-pwa-test-upload"
 
 export interface AWSCredentials {
@@ -27,23 +28,42 @@ export interface QueuedRequestData {
     contentType?: string
 }
 
-export function saveCredentials(credentials: AWSCredentials): void {
-    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(credentials))
+export async function saveCredentials(credentials: AWSCredentials): Promise<void> {
+    const db = await initDB()
+    const transaction = db.transaction([CREDENTIALS_STORE], 'readwrite')
+    const store = transaction.objectStore(CREDENTIALS_STORE)
+
+    return new Promise((resolve, reject) => {
+        const request = store.put({ id: CREDENTIALS_ID, ...credentials })
+        request.onsuccess = () => resolve()
+        request.onerror = () => reject(request.error)
+    })
 }
 
-export function loadCredentials(): AWSCredentials | null {
-    const stored = localStorage.getItem(CREDENTIALS_KEY)
-    if (!stored) return null
+export async function loadCredentials(): Promise<AWSCredentials | null> {
+    const db = await initDB()
+    const transaction = db.transaction([CREDENTIALS_STORE], 'readonly')
+    const store = transaction.objectStore(CREDENTIALS_STORE)
 
-    try {
-        return JSON.parse(stored)
-    } catch {
-        return null
-    }
-}
+    return new Promise((resolve, reject) => {
+        const request = store.get(CREDENTIALS_ID)
+        request.onsuccess = () => {
+            const result = request.result
+            if (result) {
+                resolve({ 
+                    accessKeyId: result.accessKeyId, 
+                    secretAccessKey: result.secretAccessKey 
+                })
+            } else {
+                resolve(null)
+            }
+        }
+        request.onerror = () => reject(request.error)
+    })
+}   
 
-export function getS3Client(): S3Client {
-    const credentials = loadCredentials()
+export async function getS3Client(): Promise<S3Client> {
+    const credentials = await loadCredentials()
     if (!credentials) {
         throw new Error('AWS credentials not set')
     }
@@ -58,7 +78,8 @@ export function getS3Client(): S3Client {
 }
 
 export async function listImages(): Promise<Image[]> {
-    const res = await getS3Client().send(new ListObjectsV2Command({ Bucket: BUCKET }))
+    const client = await getS3Client()
+    const res = await client.send(new ListObjectsV2Command({ Bucket: BUCKET }))
 
     if (!res.Contents) {
         return []
@@ -73,7 +94,7 @@ export async function listImages(): Promise<Image[]> {
                     Key: obj.Key!
                 })
 
-                const url = await getSignedUrl(getS3Client(), command, { expiresIn: 3600 })
+                const url = await getSignedUrl(client, command, { expiresIn: 3600 })
                 
                 return {url, key: obj.Key!}
             })
@@ -84,8 +105,8 @@ export async function listImages(): Promise<Image[]> {
 
 export async function queueUpload(key: string, fileData: ArrayBuffer, contentType: string) {
     const db = await initDB()
-    const transaction = db.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
+    const transaction = db.transaction([QUEUE_STORE], 'readwrite')
+    const store = transaction.objectStore(QUEUE_STORE)
 
     const request: QueuedRequestData = {
         type: 'upload',
@@ -99,8 +120,8 @@ export async function queueUpload(key: string, fileData: ArrayBuffer, contentTyp
 
 export async function queueDelete(key: string) {
     const db = await initDB()
-    const transaction = db.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
+    const transaction = db.transaction([QUEUE_STORE], 'readwrite')
+    const store = transaction.objectStore(QUEUE_STORE)
 
     const request: QueuedRequestData = {
         type: 'delete',
@@ -111,7 +132,8 @@ export async function queueDelete(key: string) {
 }
 
 export async function uploadImage(key: string, fileData: ArrayBuffer, contentType: string) {
-    return getS3Client().send(new PutObjectCommand({
+    const client = await getS3Client()
+    return client.send(new PutObjectCommand({
         Bucket: BUCKET,
         Key: key,
         Body: new Uint8Array(fileData),
@@ -120,7 +142,8 @@ export async function uploadImage(key: string, fileData: ArrayBuffer, contentTyp
 }
 
 export async function deleteImage(key: string) {
-    return getS3Client().send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }))
+    const client = await getS3Client()
+    return client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }))
 }
 
 export async function uploadAndQueue(key: string, fileData: ArrayBuffer, contentType: string) {

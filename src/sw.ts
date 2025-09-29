@@ -7,7 +7,17 @@ import type { QueuedRequestData } from "./services/s3"
 
 declare const self: ServiceWorkerGlobalScope
 
-const STORE_NAME = 'queued-requests'
+const STORE_NAME = 'queue'
+
+async function logToApp(message: string) {
+    const clients = await self.clients.matchAll()
+    clients.forEach(client => {
+        client.postMessage({
+            type: 'SW_LOG',
+            message
+        })
+    })
+}
 
 async function processQueue(): Promise<void> {
     const db = await initDB()
@@ -20,9 +30,13 @@ async function processQueue(): Promise<void> {
         getAllQuery.onerror = () => reject(getAllQuery.error)
     })
 
+    await logToApp(`Processing ${requests.length} queued requests`)
+
     let processedCount = 0
 
     for (const request of requests) {
+        await logToApp(`Processing request: ${JSON.stringify(request)}`)
+
         try {
             if (request.type === 'upload') {
                 await uploadImage(request.key, request.fileData!, request.contentType!)
@@ -55,12 +69,12 @@ async function processQueue(): Promise<void> {
 }
 
 self.addEventListener('install', (event: ExtendableEvent) => {
-    console.log('Service Worker: Install')
+    logToApp('Service Worker: Install')
     event.waitUntil(initDB())
 })
 
 self.addEventListener('activate', () => {
-    console.log('Service Worker: Activate')
+    logToApp('Service Worker: Activate')
 })
 
 self.addEventListener('message', (event: ExtendableMessageEvent) => {
