@@ -13,6 +13,7 @@ import WifiOffIcon from "@mui/icons-material/WifiOff"
 import { AppBar, Box, Button, Chip, Container, Drawer, IconButton, ImageList, ImageListItem, Toolbar } from "@mui/material"
 import { styled } from "@mui/material/styles"
 import CredentialsDialog from "./credentials"
+import { estimateAvailableStorage } from "./services/db"
 import { deleteAndQueue, listImages, uploadAndQueue } from "./services/s3"
 
 import type { Image } from "./services/s3"
@@ -42,10 +43,6 @@ function App() {
     const [drawerOpen, setDrawerOpen] = useState(false)
 
     const toggleDrawer = () => setDrawerOpen(!drawerOpen)
-
-    useEffect(() => {
-        fetchImages()
-    }, [])
 
     useEffect(() => {
         const formatArg = (a: unknown): string => (typeof a === "object" ? JSON.stringify(a) : String(a))
@@ -90,6 +87,10 @@ function App() {
     }, [])
 
     useEffect(() => {
+        fetchImages()
+    }, [])
+
+    useEffect(() => {
         if ("serviceWorker" in navigator) {
             console.log("Service Worker supported")
         } else {
@@ -104,6 +105,8 @@ function App() {
     }, [])
 
     useEffect(() => {
+        estimateAvailableStorage()
+
         if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
             navigator.serviceWorker.controller.postMessage({ type: "SYNC_QUEUE" })
         }
@@ -173,7 +176,7 @@ function App() {
 
     return (
         <>
-            <CredentialsDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+            <CredentialsDialog open={dialogOpen} onClose={() => {fetchImages(); setDialogOpen(false)}} />
             <Box sx={{ flexGrow: 1 }}>
                 <AppBar color="inherit">
                     <Toolbar>

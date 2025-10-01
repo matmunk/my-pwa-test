@@ -27,3 +27,19 @@ export function initDB(): Promise<IDBDatabase> {
         }
     })
 }
+
+export async function estimateAvailableStorage() {
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+        const estimate = await navigator.storage.estimate();
+        const usage = estimate.usage ?? 0;
+        const quota = estimate.quota ?? 0;
+
+        const usageMB = parseFloat((usage / (1024 * 1024)).toFixed(2));
+        const quotaMB = parseFloat((quota / (1024 * 1024)).toFixed(2));
+        const availableMB = parseFloat(((quota - usage) / (1024 * 1024)).toFixed(2));
+
+        console.log(`Quota: ${quotaMB} MB | Used: ${usageMB} MB | Remaining: ${availableMB} MB`);
+    } else {
+        console.log("StorageManager API not supported");
+    }
+}
