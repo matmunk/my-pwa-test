@@ -110,7 +110,7 @@ export async function queueUpload(key: string, fileData: ArrayBuffer, contentTyp
 
     const request: QueuedRequestData = {
         type: 'upload',
-        key,
+        key: generateUniqueKey(key),
         fileData,
         contentType
     }
@@ -135,7 +135,7 @@ export async function uploadImage(key: string, fileData: ArrayBuffer, contentTyp
     const client = await getS3Client()
     return client.send(new PutObjectCommand({
         Bucket: BUCKET,
-        Key: key,
+        Key: generateUniqueKey(key),
         Body: new Uint8Array(fileData),
         ContentType: contentType
     }))
@@ -170,4 +170,10 @@ export async function deleteAndQueue(key: string) {
             throw error
         }
     }
+}
+
+function generateUniqueKey(originalKey: string): string {
+    const uuid = crypto.randomUUID()
+    const extension = originalKey.substring(originalKey.lastIndexOf('.'))
+    return `${uuid}${extension}`
 }
