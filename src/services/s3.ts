@@ -18,6 +18,7 @@ export interface AWSCredentials {
 export interface Image {
     url: string
     key: string
+    lastModified: Date
 }
 
 export interface QueuedRequestData {
@@ -96,7 +97,7 @@ export async function listImages(): Promise<Image[]> {
 
                 const url = await getSignedUrl(client, command, { expiresIn: 3600 })
                 
-                return {url, key: obj.Key!}
+                return {url, key: obj.Key!, lastModified: obj.LastModified!}
             })
     )
 

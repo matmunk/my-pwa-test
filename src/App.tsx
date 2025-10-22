@@ -151,7 +151,14 @@ function App() {
 
     async function fetchImages() {
         const imageList = await listImages()
-        setImages(imageList)
+
+        const sortedImages = imageList.sort((a, b) => {
+            const timeA = a.lastModified.getTime()
+            const timeB = b.lastModified.getTime()
+            return timeB - timeA
+        })
+
+        setImages(sortedImages)
     }
 
     async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -176,7 +183,13 @@ function App() {
 
     return (
         <>
-            <CredentialsDialog open={dialogOpen} onClose={() => {fetchImages(); setDialogOpen(false)}} />
+            <CredentialsDialog
+                open={dialogOpen}
+                onClose={() => {
+                    fetchImages()
+                    setDialogOpen(false)
+                }}
+            />
             <Box sx={{ flexGrow: 1 }}>
                 <AppBar color="inherit">
                     <Toolbar>
